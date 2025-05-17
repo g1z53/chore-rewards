@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chore Rewards App</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    h2 { margin-top: 30px; }
+    .progress-bar {
+      width: 100%;
+      background: #ddd;
+      height: 20px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .progress-bar-inner {
+      height: 100%;
+      background: #4caf50;
+      width: 0%;
+    }
+    .tab { display: none; }
+    .tab.active { display: block; }
+    button { margin: 5px 0; }
+  </style>
+</head>
+<body>
+
+  <h1>Chore Rewards</h1>
+  <div class="progress-bar">
+    <div class="progress-bar-inner" id="progressBar"></div>
+  </div>
+  <p>Points: <span id="points">0</span></p>
+
+  <div>
+    <button onclick="showTab('chores')">Chores</button>
+    <button onclick="showTab('rewards')">Rewards</button>
+    <button onclick="showTab('inventory')">Inventory</button>
+  </div>
+
+  <!-- Chores Tab -->
+  <div id="chores" class="tab active">
+    <h2>Chores</h2>
+    <input id="choreName" placeholder="Chore Name" />
+    <input id="chorePoints" type="number" placeholder="Points" />
+    <button onclick="addChore()">Add Chore</button>
+    <ul id="choreList"></ul>
+  </div>
+
+  <!-- Rewards Tab -->
+  <div id="rewards" class="tab">
+    <h2>Rewards</h2>
+    <input id="rewardName" placeholder="Reward Name" />
+    <input id="rewardCost" type="number" placeholder="Cost" />
+    <button onclick="addReward()">Add Reward</button>
+    <ul id="rewardList"></ul>
+  </div>
+
+  <!-- Inventory Tab -->
+  <div id="inventory" class="tab">
+    <h2>Redeemed Rewards</h2>
+    <ul id="inventoryList"></ul>
+  </div>
+
+  <script>
+    let data = JSON.parse(localStorage.getItem('choreData')) || {
+      points: 0,
+      chores: [],
+      rewards: [],
+      inventory: []
+    };
+
+    function save() {
+      localStorage.setItem('choreData', JSON.stringify(data));
+      updateUI();
+    }
+
+    function updateUI() {
+      document.getElementById('points').textContent = data.points;
+      document.getElementById('progressBar').style.width = (data.points % 100) + '%';
+
+      // Chores
+      let choreList = document.getElementById('choreList');
+      choreList.innerHTML = '';
+      data.chores.forEach((c, i) => {
+        let li = document.createElement('li');
+        li.innerHTML = `${c.name} (+${c.points} pts)
+          <button onclick="completeChore(${i})">Done</button>`;
+        choreList.appendChild(li);
+      });
+
+      // Rewards
+      let rewardList = document.getElementById('rewardList');
+      rewardList.innerHTML = '';
+      data.rewards.forEach((r, i) => {
+        let li = document.createElement('li');
+        li.innerHTML = `${r.name} (-${r.cost} pts)
+          <button ${data.points < r.cost ? 'disabled' : ''} onclick="redeemReward(${i})">Redeem</button>`;
+        rewardList.appendChild(li);
+      });
+
+      // Inventory
+      let inventoryList = document.getElementById('inventoryList');
+      inventoryList.innerHTML = '';
+      data.inventory.forEach((r, i) => {
+        let li = document.createElement('li');
+        li.innerHTML = `${r.name} (redeemed on ${r.date})
+          <button onclick="removeInventory(${i})">Remove</button>`;
+        inventoryList.appendChild(li);
+      });
+    }
+
+    function showTab(id) {
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function addChore() {
+      let name = document.getElementById('choreName').value;
+      let points = parseInt(document.getElementById('chorePoints').value);
+      if (name && !isNaN(points)) {
+        data.chores.push({ name, points });
+        document.getElementById('choreName').value = '';
+        document.getElementById('chorePoints').value = '';
+        save();
+      }
+    }
+
+    function completeChore(index) {
+      data.points += data.chores[index].points;
+      data.chores.splice(index, 1);
+      save();
+    }
+
+    function addReward() {
+      let name = document.getElementById('rewardName').value;
+      let cost = parseInt(document.getElementById('rewardCost').value);
+      if (name && !isNaN(cost)) {
+        data.rewards.push({ name, cost });
+        document.getElementById('rewardName').value = '';
+        document.getElementById('rewardCost').value = '';
+        save();
+      }
+    }
+
+    function redeemReward(index) {
+      let reward = data.rewards[index];
+      if (data.points >= reward.cost) {
+        data.points -= reward.cost;
+        data.inventory.push({
+          name: reward.name,
+          date: new Date().toLocaleString()
+        });
+        save();
+      }
+    }
+
+    function removeInventory(index) {
+      data.inventory.splice(index, 1);
+      save();
+    }
+
+    updateUI();
+  </script>
+
+</body>
+</html>
